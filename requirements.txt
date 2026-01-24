@@ -1,0 +1,8 @@
+pandas
+numpy
+akshare
+duckduckgo-search>=5.0
+tavily-python
+openai
+requests
+scipy
