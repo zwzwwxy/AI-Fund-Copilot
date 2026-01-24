@@ -69,10 +69,10 @@ def main():
             if met_weekly:
                 met.update(met_weekly)
             else:
-                met['sharpe_weekly'] = "N/A"
-                met['sharpe_weekly_explanation'] = "周数据不足"
-                met['weekly_ret_mean'] = "N/A"
-                met['weekly_vol'] = "N/A"
+                met['sharpe_weekly_1年'] = "N/A"
+                met['sharpe_weekly_2年'] = "N/A"
+                met['sharpe_weekly_3年'] = "N/A"
+                met['sharpe_weekly_rf'] = "N/A"
 
             log(f"D. 搜索资讯...")
             specific_news = news_bot.get_specific_news(
