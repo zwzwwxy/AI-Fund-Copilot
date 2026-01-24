@@ -93,7 +93,7 @@ class Analyzer:
         s = df[col].astype(float)
 
         weekly_data = s.resample('W-MON').last()
-        weekly_ret = weekly_data.pct_change().dropna()
+        weekly_ret = weekly_data.pct_change(fill_method=None).dropna()
 
         weekly_rf = get_weekly_risk_free_rate()
         annual_rf = get_risk_free_rate()
