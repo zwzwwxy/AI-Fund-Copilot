@@ -18,8 +18,8 @@ class Analyzer:
         latest_price = s.iloc[-1]
         print(f"  [Metrics] {code} 最新价: {latest_price:.3f}, 数据点: {len(s)}")
 
-        ret_1m = s.pct_change(20).iloc[-1]
-        ret_1y = s.pct_change(250).iloc[-1] if len(s) > 250 else 0.0
+        ret_1m = s.pct_change(20, fill_method=None).iloc[-1]
+        ret_1y = s.pct_change(250, fill_method=None).iloc[-1] if len(s) > 250 else 0.0
 
         historical_max = s.max()
         current_dd = (latest_price - historical_max) / historical_max
@@ -29,7 +29,7 @@ class Analyzer:
         drawdown = (s_1y - roll_max) / roll_max
         max_dd_1y = drawdown.min()
 
-        daily_ret = s.pct_change().dropna()
+        daily_ret = s.pct_change(fill_method=None).dropna()
         ann_vol = daily_ret.std() * np.sqrt(250)
         ann_ret = daily_ret.mean() * 250
         sharpe = (ann_ret - RISK_FREE_RATE) / (ann_vol + 1e-9)
