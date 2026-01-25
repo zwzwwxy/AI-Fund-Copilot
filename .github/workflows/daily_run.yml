@@ -3,7 +3,7 @@ name: Daily Fund Analyst
 on:
   schedule:
     # 每天北京时间 17:00 (UTC 09:00) 运行
-    - cron: '0 9 * * *'
+    - cron: '0 2 * * *'
   workflow_dispatch: # 允许手动点击按钮运行
 
 jobs:
