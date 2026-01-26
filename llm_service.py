@@ -105,3 +105,74 @@ class LLMService:
         except Exception as e:
             print(f"  [ERROR] [LLM] {info['name']} 调用失败: {e}")
             return f"LLM 调用出错: {e}"
+
+    def generate_holdings_report(self, portfolio_summary: dict, position_details: list):
+        if not self.client:
+            return "⚠️ API Key 未配置"
+
+        if not position_details:
+            return None
+
+        positions_text = ""
+        for p in position_details:
+            profit_emoji = "📈" if p.get('profit_loss', 0) >= 0 else "📉"
+            positions_text += f"""
+### {p.get('code')} - {p.get('name', '')} {profit_emoji}
+- **持仓份额**: {p.get('shares', 0)} 份
+- **持仓成本**: {p.get('avg_cost', 0):.3f} 元
+- **当前价格**: {p.get('current_price', 0):.3f} 元
+- **持仓金额**: {p.get('current_value', 0):.2f} 元
+- **持仓盈亏**: {p.get('profit_loss', 0):.2f} 元 ({p.get('profit_loss_pct', 0):.2f}%)
+- **成本位置**: 当前价格比成本{'高' if p.get('cost_position', 0) >= 0 else '低'} {abs(p.get('cost_position', 0)):.2f}%
+"""
+
+        system_prompt = """
+        你是一位资深的基金投资顾问，擅长根据用户的个人持仓情况提供个性化的投资建议。
+
+        请基于用户提供个人持仓数据（包含持仓成本、当前盈亏等信息），生成一份简洁实用的个人持仓分析报告。
+
+        报告要求：
+        1. **整体评估**：用1-2句话概括当前持仓的整体盈亏状态
+        2. **持仓诊断**：分析每只持仓的成本是否合理、是否需要调整
+        3. **操作建议**：针对亏损持仓给出补仓/止损建议，针对盈利持仓给出止盈/持有建议
+        4. **仓位优化**：根据整体持仓情况，给出是否需要加仓或减仓的建议
+
+        特别注意：
+        - 对于亏损超过10%的持仓，重点分析原因并给出操作建议
+        - 对于盈利超过20%的持仓，分析是否需要止盈
+        - 建议要具体、可执行（适合银行APP操作）
+        - 用emoji增强可读性
+        """
+
+        user_content = f"""
+        【个人持仓概况】
+        - 持仓总金额: {portfolio_summary.get('total_value', 0):.2f} 元
+        - 总成本: {portfolio_summary.get('total_cost', 0):.2f} 元
+        - 总盈亏: {portfolio_summary.get('total_profit', 0):.2f} 元 ({portfolio_summary.get('total_profit_pct', 0):.2f}%)
+        - 持仓数量: {portfolio_summary.get('position_count', 0)} 只
+          - ETF数量: {portfolio_summary.get('etf_count', 0)}
+          - 场外基金数量: {portfolio_summary.get('mutual_count', 0)}
+        - 分析时间: {portfolio_summary.get('analysis_date', '')}
+
+        【持仓明细】
+        {positions_text}
+        """
+
+        print(f"  [LLM] 正在生成个人持仓分析报告...")
+
+        try:
+            resp = self.client.chat.completions.create(
+                model=LLM_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_content}
+                ],
+                temperature=0.7
+            )
+            report = resp.choices[0].message.content
+            report_len = len(report) if report else 0
+            print(f"  [OK] [LLM] 持仓分析报告生成成功 ({report_len} 字符)")
+            return report
+        except Exception as e:
+            print(f"  [ERROR] [LLM] 持仓分析报告调用失败: {e}")
+            return f"LLM 调用出错: {e}"

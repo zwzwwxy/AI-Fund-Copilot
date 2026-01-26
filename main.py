@@ -7,6 +7,7 @@ from news_fetcher import NewsFetcher
 from analyzer import Analyzer
 from llm_service import LLMService
 from notifier import TelegramBot
+from holdings_manager import HoldingsManager
 
 def log(msg, level="INFO"):
     timestamp = datetime.now().strftime("%H:%M:%S")
@@ -32,11 +33,22 @@ def main():
     macro_len = len(macro_news) if macro_news else 0
     log(f"宏观资讯获取完成 ({macro_len} 字符)")
 
+    holdings_manager = HoldingsManager()
+    holdings = holdings_manager.get_holdings()
+
+    if holdings:
+        log(f"检测到个人持仓配置: {len(holdings)} 只基金")
+        holdings_codes = [str(h.get('code', '')) for h in holdings if h.get('code')]
+        log(f"持仓代码: {', '.join(holdings_codes)}")
+    else:
+        log("未配置个人持仓，跳过持仓分析")
+
     tasks = [{'c': c, 't': 'ETF'} for c in ETF_LIST] + \
             [{'c': c, 't': 'Mutual'} for c in MUTUAL_LIST]
 
     success_count = 0
     fail_count = 0
+    holdings_position_details = []
 
     log(f"任务列表: {len(tasks)} 只基金待分析", "INFO")
 
@@ -85,6 +97,16 @@ def main():
             full_news = f"{macro_news}\n{specific_news}"
             report = ai.generate_report(info, met, full_news)
 
+            if holdings_manager.is_holding_analyzed(code):
+                log(f"E2. 计算个人持仓盈亏...")
+                holding_info = holdings_manager.get_holding_by_code(code)
+                position_pnl = None
+                if holding_info:
+                    position_pnl = calc.calculate_position_pnl(df, holding_info)
+                if position_pnl:
+                    holdings_position_details.append(position_pnl)
+                    log(f"    持仓分析: 当前{position_pnl['profit_loss_pct']:.2f}%, 持仓{position_pnl['shares']}份")
+
             if report and "LLM 调用出错" in report:
                 log(f"LLM 生成失败: {report}", "ERROR")
                 fail_count += 1
@@ -114,6 +136,16 @@ def main():
     log(f"结束时间: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
     log(f"总耗时: {duration:.1f} 秒")
     log(f"成功: {success_count}, 失败: {fail_count}")
+
+    if holdings_position_details:
+        print("-" * 60)
+        log("个人持仓分析报告", "INFO")
+        portfolio_summary = holdings_manager.get_portfolio_summary(holdings_position_details)
+        holdings_report = ai.generate_holdings_report(portfolio_summary, holdings_position_details)
+        if holdings_report:
+            tg.send_report("个人持仓分析报告", holdings_report)
+            log("持仓分析报告已推送", "SUCCESS")
+
     print("=" * 60)
 
 if __name__ == "__main__":

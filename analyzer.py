@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from datetime import datetime
 from config import RISK_FREE_RATE
 from utils import get_risk_free_rate, get_weekly_risk_free_rate
 
@@ -134,3 +135,80 @@ class Analyzer:
         result['sharpe_weekly_rf'] = f"{annual_rf:.2%}"
 
         return result
+
+    def calculate_position_pnl(self, df, holding_info: dict) -> dict:
+        """
+        计算持仓盈亏分析
+
+        Args:
+            df: 价格数据DataFrame
+            holding_info: 持仓信息字典 (shares, avg_cost, name, code, type)
+
+        Returns:
+            dict: 持仓盈亏分析结果
+        """
+        code = holding_info.get('code', 'Unknown')
+        is_etf = holding_info.get('type') == 'ETF'
+
+        col = '收盘' if is_etf and '收盘' in df.columns else \
+              '单位净值' if '单位净值' in df.columns else df.columns[0]
+
+        s = df[col].astype(float)
+        current_price = s.iloc[-1]
+
+        shares = holding_info.get('shares', 0)
+        avg_cost = holding_info.get('avg_cost', 0)
+
+        if shares <= 0 or avg_cost <= 0:
+            return None
+
+        current_value = shares * current_price
+        cost_basis = shares * avg_cost
+        profit_loss = current_value - cost_basis
+        profit_loss_pct = (profit_loss / cost_basis) * 100 if cost_basis > 0 else 0
+
+        # 计算持仓占比（根据当前总仓位的估算）
+        total_value_estimate = cost_basis
+        position_weight = (current_value / total_value_estimate * 100) if total_value_estimate > 0 else 0
+
+        # 计算买入时机评分（基于持有时长和买入成本）
+        buy_dates = holding_info.get('buy_dates', [])
+        holding_score = 50  # 基础分
+
+        if buy_dates:
+            try:
+                first_buy = min(buy_dates)
+                buy_datetime = datetime.strptime(first_buy, '%Y-%m-%d')
+                days_held = (datetime.now() - buy_datetime).days
+                if days_held > 365:
+                    holding_score += 20
+                elif days_held > 180:
+                    holding_score += 10
+                elif days_held < 30:
+                    holding_score -= 10
+            except:
+                pass
+
+        # 成本线位置
+        cost_position = (current_price - avg_cost) / avg_cost * 100
+
+        print(f"  [Position-PnL] {code} 持仓分析: 当前价={current_price:.3f}, "
+              f"成本={avg_cost:.3f}, 盈亏={profit_loss_pct:.2f}%, 持仓{shares}份")
+
+        return {
+            'code': code,
+            'name': holding_info.get('name', ''),
+            'type': holding_info.get('type', ''),
+            'shares': shares,
+            'avg_cost': avg_cost,
+            'current_price': current_price,
+            'current_value': round(current_value, 2),
+            'cost_basis': round(cost_basis, 2),
+            'profit_loss': round(profit_loss, 2),
+            'profit_loss_pct': round(profit_loss_pct, 2),
+            'position_weight': round(position_weight, 1),
+            'cost_position': round(cost_position, 2),
+            'holding_score': holding_score,
+            'buy_dates': buy_dates,
+            'days_held': days_held if 'days_held' in dir() else None
+        }

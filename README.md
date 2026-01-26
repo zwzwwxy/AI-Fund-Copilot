@@ -43,6 +43,42 @@
 - `MUTUAL_LIST`: 逗号分隔的场外基金代码 (如 `000478,005827`)
 - `LLM_MODEL`: 模型名称 (如 `gpt-4-turbo` 或 `deepseek-chat`)
 
+### 个人持仓分析（可选）
+
+支持个人持仓分析功能，开启后会生成个性化持仓报告并推送。
+
+#### 方式一：本地文件（推荐本地运行使用）
+
+在项目根目录创建 `holdings.json` 文件：
+
+```json
+{
+    "holdings": [
+        {
+            "code": "510300",
+            "name": "沪深300ETF",
+            "type": "ETF",
+            "shares": 10000,
+            "avg_cost": 3.5,
+            "buy_dates": ["2024-01-15", "2024-03-20"]
+        }
+    ],
+    "risk_tolerance": "medium"
+}
+```
+
+> ⚠️ `holdings.json` 已被 `.gitignore` 忽略，**不会上传到 GitHub**
+
+#### 方式二：GitHub Secrets（用于 GitHub Actions）
+
+将持仓配置转为 JSON 字符串，存入 `HOLDINGS_JSON` Secret：
+
+```
+HOLDINGS_JSON = {"holdings":[{"code":"510300","name":"沪深300ETF","type":"ETF","shares":10000,"avg_cost":3.5,"buy_dates":["2024-01-15"]}],"risk_tolerance":"medium"}
+```
+
+> 注意：所有字符串必须使用双引号，环境变量中需要转义特殊字符。
+
 ## 本地运行
 
 ```bash
