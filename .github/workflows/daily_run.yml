@@ -2,8 +2,13 @@ name: Daily Fund Analyst
 
 on:
   schedule:
-    # 每天北京时间 10:00 (UTC 02:00) 运行
+    # 每天北京时间 10:00 (UTC 02:00) 运行，增加备份时间点
+    # UTC 02:00 = 北京时间 10:00
+    # UTC 03:00 = 北京时间 11:00
+    # UTC 04:00 = 北京时间 12:00
     - cron: '0 2 * * *'
+    - cron: '0 3 * * *'
+    - cron: '0 4 * * *'
   workflow_dispatch: # 允许手动点击按钮运行
 
 jobs:
