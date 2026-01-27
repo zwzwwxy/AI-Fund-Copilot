@@ -14,15 +14,17 @@ on:
 jobs:
   run_analysis:
     runs-on: ubuntu-latest
+    timeout-minutes: 120  # 新增：防止任务无限期运行
     
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4  # 更新为最新版本
 
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.9'
+        cache: 'pip'  # 新增：缓存 pip 依赖以加速安装
 
     - name: Install Dependencies
       run: |
@@ -30,6 +32,24 @@ jobs:
         # 强制更新 akshare 确保金融接口可用
         pip install --upgrade akshare
         pip install -r requirements.txt
+
+    - name: Validate Secrets
+      run: |
+        python -c "
+        import os
+        required_secrets = ['LLM_API_KEY', 'LLM_BASE_URL', 'TAVILY_API_KEY', 'TG_BOT_TOKEN', 'TG_CHAT_ID']
+        missing = [s for s in required_secrets if not os.getenv(s)]
+        if missing:
+            print(f'❌ 缺少 secrets: {missing}')
+            exit(1)
+        print('✅ 所有必需的 secrets 已配置')
+        "
+      env:
+        LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+        TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+        TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+        TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
 
     - name: Run Analysis
       env:
@@ -46,3 +66,20 @@ jobs:
         LLM_MODEL: ${{ vars.LLM_MODEL }}
       run: |
         python main.py
+
+    - name: Upload Logs on Failure
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: workflow-logs
+        retention-days: 7
+        if-no-files-found: ignore
+        path: |
+          *.log
+          .github/workflows/
+
+    - name: Send Failure Notification
+      if: failure()
+      run: |
+        echo "⚠️ 基金分析任务失败！"
+        echo "请检查 GitHub Actions 日志: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
