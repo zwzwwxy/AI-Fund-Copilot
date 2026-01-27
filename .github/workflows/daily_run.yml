@@ -69,7 +69,7 @@ jobs:
 
     - name: Upload Logs on Failure
       if: failure()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: workflow-logs
         retention-days: 7
@@ -83,3 +83,4 @@ jobs:
       run: |
         echo "⚠️ 基金分析任务失败！"
         echo "请检查 GitHub Actions 日志: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
