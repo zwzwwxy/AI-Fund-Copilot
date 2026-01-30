@@ -4,11 +4,7 @@ on:
   schedule:
     # 每天北京时间 10:00 (UTC 02:00) 运行，增加备份时间点
     # UTC 02:00 = 北京时间 10:00
-    # UTC 03:00 = 北京时间 11:00
-    # UTC 04:00 = 北京时间 12:00
     - cron: '0 2 * * *'
-    - cron: '0 3 * * *'
-    - cron: '0 4 * * *'
   workflow_dispatch: # 允许手动点击按钮运行
 
 jobs:
@@ -83,4 +79,5 @@ jobs:
       run: |
         echo "⚠️ 基金分析任务失败！"
         echo "请检查 GitHub Actions 日志: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
 
